@@ -1,0 +1,417 @@
+diff --git a/index.html b/index.html
+index e5160a6..b23f263 100644
+--- a/index.html
++++ b/index.html
+@@ -3,7 +3,7 @@
+ 
+ <head>
+   <meta charset="UTF-8" />
+-  <link rel="icon" type="image/png" href="/favicon.png" sizes="48x48" />
++  <link rel="icon" type="image/png" href="/hot/favicon.png" sizes="48x48" />
+   <link rel="icon" type="image/svg+xml" href="/icon.svg" sizes="any" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <!-- SEO Meta Tags -->
+@@ -27,7 +27,7 @@
+ 
+   <meta name="theme-color" content="#F14D42" />
+   <link rel="preload" href="/Baloo2-Bold.subset.ttf" as="font" type="font/ttf" crossorigin>
+-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
++  <link rel="apple-touch-icon" href="/hot/apple-touch-icon.png" sizes="180x180" />
+ 
+   <!-- Schema.org markup for Google -->
+   <script type="application/ld+json">
+@@ -40,14 +40,6 @@
+     }
+   </script>
+ 
+-  <!-- Google Analytics -->
+-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-EL9HHYE5LC"></script>
+-  <script>
+-    window.dataLayer = window.dataLayer || [];
+-    function gtag() { dataLayer.push(arguments); }
+-    gtag('js', new Date());
+-    gtag('config', 'G-EL9HHYE5LC');
+-  </script>
+ 
+   <script>
+     const query = new URLSearchParams(window.location.search)
+@@ -57,7 +49,7 @@
+       window.history.replaceState({}, document.title, window.location.pathname)
+     }
+   </script>
+-  <title>NewsNow</title>
++  <title>今日热榜 · 全网热点一页看完</title>
+ </head>
+ 
+ <body>
+diff --git a/nitro.config.ts b/nitro.config.ts
+index fe96de1..199e654 100644
+--- a/nitro.config.ts
++++ b/nitro.config.ts
+@@ -5,6 +5,7 @@ import { RollopGlob } from "./tools/rollup-glob"
+ import { projectDir } from "./shared/dir"
+ 
+ const nitroOption: Parameters<typeof viteNitro>[0] = {
++  baseURL: "/hot/",
+   experimental: {
+     database: true,
+   },
+diff --git a/server/middleware/auth.ts b/server/middleware/auth.ts
+index 68de973..2880862 100644
+--- a/server/middleware/auth.ts
++++ b/server/middleware/auth.ts
+@@ -3,6 +3,7 @@ import { jwtVerify } from "jose"
+ 
+ export default defineEventHandler(async (event) => {
+   const url = getRequestURL(event)
++  url.pathname = url.pathname.replace(/^\/hot(?=\/)/, "")
+   if (!url.pathname.startsWith("/api")) return
+   if (["JWT_SECRET", "G_CLIENT_ID", "G_CLIENT_SECRET"].find(k => !process.env[k])) {
+     event.context.disabledLogin = true
+diff --git a/shared/pinyin.json b/shared/pinyin.json
+index f515966..d9a9011 100644
+--- a/shared/pinyin.json
++++ b/shared/pinyin.json
+@@ -2,7 +2,6 @@
+   "v2ex-share": "V2EX-zuixinfenxiang",
+   "zhihu": "zhihu",
+   "weibo": "weibo-shishiresou",
+-  "zaobao": "lianhezaobao",
+   "coolapk": "kuan-jinrizuire",
+   "mktnews-flash": "MKTNews-kuaixun",
+   "wallstreetcn-quick": "huaerjiejianwen-kuaixun",
+@@ -18,7 +17,6 @@
+   "toutiao": "jinritoutiao",
+   "ithome": "ITzhijia",
+   "thepaper": "pengpaixinwen-rebang",
+-  "sputniknewscn": "weixingtongxunshe",
+   "cankaoxiaoxi": "cankaoxiaoxi",
+   "pcbeta-windows11": "yuanjingluntan-Win11",
+   "cls-telegraph": "cailianshe-dianbao",
+@@ -47,8 +45,6 @@
+   "chongbuluo-hot": "chongbuluo-zuire",
+   "douban": "douban-remendianying",
+   "steam": "Steam-zaixianrenshu",
+-  "tencent-hot": "tengxunxinwen-zonghezaobao",
+-  "freebuf": "Freebuf-wangluoanquan",
+   "qqvideo-tv-hotsearch": "tengxunshipin-resoubang",
+   "iqiyi-hot-ranklist": "aiqiyi-rebobang"
+ }
+\ No newline at end of file
+diff --git a/shared/pre-sources.ts b/shared/pre-sources.ts
+index fe19a63..5a82b08 100644
+--- a/shared/pre-sources.ts
++++ b/shared/pre-sources.ts
+@@ -545,7 +545,8 @@ export function genSources() {
+   })
+ 
+   return typeSafeObjectFromEntries(
+-    _.filter(([_, v]) => {
++    _.filter(([k, v]) => {
++      if (["zaobao", "sputniknewscn", "tencent", "freebuf"].some(x => k === x || k.startsWith(`${x}-`))) return false
+       if (v.disable === "cf" && process.env.CF_PAGES) {
+         return false
+       } else {
+diff --git a/shared/sources.json b/shared/sources.json
+index 31ac4cc..0b4ee82 100644
+--- a/shared/sources.json
++++ b/shared/sources.json
+@@ -33,15 +33,6 @@
+     "color": "red",
+     "interval": 120000
+   },
+-  "zaobao": {
+-    "name": "联合早报",
+-    "type": "realtime",
+-    "desc": "来自第三方网站: 早晨报",
+-    "column": "world",
+-    "home": "https://www.zaobao.com",
+-    "color": "red",
+-    "interval": 1800000
+-  },
+   "coolapk": {
+     "title": "今日最热",
+     "name": "酷安",
+@@ -203,13 +194,6 @@
+     "color": "gray",
+     "interval": 1800000
+   },
+-  "sputniknewscn": {
+-    "name": "卫星通讯社",
+-    "column": "world",
+-    "home": "https://sputniknews.cn",
+-    "color": "orange",
+-    "interval": 600000
+-  },
+   "cankaoxiaoxi": {
+     "name": "参考消息",
+     "column": "world",
+@@ -518,34 +502,6 @@
+     "color": "blue",
+     "interval": 600000
+   },
+-  "tencent": {
+-    "redirect": "tencent-hot",
+-    "name": "腾讯新闻",
+-    "type": "hottest",
+-    "column": "china",
+-    "home": "https://news.qq.com/tag/aEWqxLtdgmQ=",
+-    "color": "blue",
+-    "interval": 1800000,
+-    "title": "综合早报"
+-  },
+-  "tencent-hot": {
+-    "name": "腾讯新闻",
+-    "type": "hottest",
+-    "column": "china",
+-    "home": "https://news.qq.com/tag/aEWqxLtdgmQ=",
+-    "color": "blue",
+-    "interval": 1800000,
+-    "title": "综合早报"
+-  },
+-  "freebuf": {
+-    "title": "网络安全",
+-    "name": "Freebuf",
+-    "type": "hottest",
+-    "column": "china",
+-    "home": "https://www.freebuf.com/",
+-    "color": "green",
+-    "interval": 600000
+-  },
+   "qqvideo": {
+     "redirect": "qqvideo-tv-hotsearch",
+     "name": "腾讯视频",
+diff --git a/src/components/column/card.tsx b/src/components/column/card.tsx
+index 5911b54..18782dc 100644
+--- a/src/components/column/card.tsx
++++ b/src/components/column/card.tsx
+@@ -114,7 +114,7 @@ function NewsCard({ id, setHandleRef }: NewsCardProps) {
+             href={sources[id].home}
+             title={sources[id].desc}
+             style={{
+-              backgroundImage: `url(/icons/${id.split("-")[0]}.png)`,
++              backgroundImage: `url(/hot/icons/${id.split("-")[0]}.png)`,
+             }}
+           />
+           <span className="flex flex-col">
+diff --git a/src/components/column/dnd.tsx b/src/components/column/dnd.tsx
+index 4b4afae..c058135 100644
+--- a/src/components/column/dnd.tsx
++++ b/src/components/column/dnd.tsx
+@@ -147,7 +147,7 @@ function CardOverlay({ id }: { id: SourceID }) {
+           <div
+             className={$("w-8 h-8 rounded-full bg-cover")}
+             style={{
+-              backgroundImage: `url(/icons/${id.split("-")[0]}.png)`,
++              backgroundImage: `url(/hot/icons/${id.split("-")[0]}.png)`,
+             }}
+           />
+           <span className="flex flex-col">
+diff --git a/src/components/common/search-bar/index.tsx b/src/components/common/search-bar/index.tsx
+index bfab7c7..f01f6b5 100644
+--- a/src/components/common/search-bar/index.tsx
++++ b/src/components/common/search-bar/index.tsx
+@@ -124,7 +124,7 @@ function SourceItem({ item }: {
+         <span
+           className={$("w-4 h-4 rounded-md bg-cover")}
+           style={{
+-            backgroundImage: `url(/icons/${item.id.split("-")[0]}.png)`,
++            backgroundImage: `url(/hot/icons/${item.id.split("-")[0]}.png)`,
+           }}
+         />
+         <span>{item.name}</span>
+diff --git a/src/hooks/useLogin.ts b/src/hooks/useLogin.ts
+index f7cfd6c..01eadd3 100644
+--- a/src/hooks/useLogin.ts
++++ b/src/hooks/useLogin.ts
+@@ -29,7 +29,7 @@ export function useLogin() {
+   const enableLogin = useAtomValue(enableLoginAtom)
+ 
+   const login = useCallback(() => {
+-    window.location.href = enableLogin.url || "/api/login"
++    window.location.href = enableLogin.url || "/hot/api/login"
+   }, [enableLogin])
+ 
+   const logout = useCallback(() => {
+diff --git a/src/main.tsx b/src/main.tsx
+index ca10720..f5412a2 100644
+--- a/src/main.tsx
++++ b/src/main.tsx
+@@ -2,12 +2,12 @@ import ReactDOM from "react-dom/client"
+ import { RouterProvider, createRouter } from "@tanstack/react-router"
+ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+ import { routeTree } from "./routeTree.gen"
+-import "./utils/pwa"
+ 
+ const queryClient = new QueryClient()
+ 
+ const router = createRouter({
+   routeTree,
++  basepath: "/hot",
+   context: {
+     queryClient,
+   },
+diff --git a/src/utils/index.ts b/src/utils/index.ts
+index 7dcb3d9..b52f97b 100644
+--- a/src/utils/index.ts
++++ b/src/utils/index.ts
+@@ -40,7 +40,7 @@ export class Timer {
+ export const myFetch = $fetch.create({
+   timeout: 15000,
+   retry: 0,
+-  baseURL: "/api",
++  baseURL: "/hot/api",
+ })
+ 
+ export function isiOS() {
+diff --git a/src/utils/pwa.ts b/src/utils/pwa.ts
+index ebeec74..3ed8b0e 100644
+--- a/src/utils/pwa.ts
++++ b/src/utils/pwa.ts
+@@ -1,108 +1,6 @@
+-import { registerSW } from "virtual:pwa-register"
+-
+ export type PwaUpdateState = "idle" | "ready" | "applying" | "successful"
+-
+-type ApplyUpdate = () => Promise<void>
+ type UpdateStateListener = (state: PwaUpdateState) => void
+-
+-const PENDING_KEY = "newsnow:pwa-update-pending"
+-const SUCCESS_KEY = "newsnow:pwa-update-successful"
+-
+-// 清理旧版本（useRegisterSW 时代）遗留的标记
+-localStorage.removeItem("updated")
+-
+-// 浏览器默认只在页面加载时检查 SW 更新，定时检查让长时间打开的页面也能拿到更新
+-const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000
+-
+-const pendingAtStartup = localStorage.getItem(PENDING_KEY) === "true"
+-const successfulAtStartup = sessionStorage.getItem(SUCCESS_KEY) === "true"
+-
+-if (successfulAtStartup) {
+-  sessionStorage.removeItem(SUCCESS_KEY)
+-  localStorage.removeItem(PENDING_KEY)
++export async function applyPwaUpdate() {}
++export function subscribePwaUpdateState(_listener: UpdateStateListener) {
++  return () => {}
+ }
+-
+-let updateState: PwaUpdateState = successfulAtStartup ? "successful" : "idle"
+-let applyUpdateImpl: ApplyUpdate | undefined
+-const listeners = new Set<UpdateStateListener>()
+-
+-function setUpdateState(state: PwaUpdateState) {
+-  if (updateState === state) return
+-  updateState = state
+-  listeners.forEach(listener => listener(state))
+-}
+-
+-function markPwaUpdateReady(apply: ApplyUpdate) {
+-  applyUpdateImpl = apply
+-  localStorage.setItem(PENDING_KEY, "true")
+-  setUpdateState("ready")
+-}
+-
+-function markPwaUpdateSuccessful() {
+-  localStorage.removeItem(PENDING_KEY)
+-  setUpdateState("successful")
+-}
+-
+-export async function applyPwaUpdate() {
+-  if (!applyUpdateImpl || updateState === "applying") return
+-
+-  setUpdateState("applying")
+-  sessionStorage.setItem(SUCCESS_KEY, "true")
+-  localStorage.removeItem(PENDING_KEY)
+-
+-  try {
+-    await applyUpdateImpl()
+-  } catch (error) {
+-    sessionStorage.removeItem(SUCCESS_KEY)
+-    localStorage.setItem(PENDING_KEY, "true")
+-    setUpdateState("ready")
+-    throw error
+-  }
+-}
+-
+-export function subscribePwaUpdateState(listener: UpdateStateListener) {
+-  listener(updateState)
+-  listeners.add(listener)
+-  return () => {
+-    listeners.delete(listener)
+-  }
+-}
+-
+-let updateDetected = false
+-
+-function applyUpdate() {
+-  applyPwaUpdate().catch((error) => {
+-    console.warn("service worker update failed", error)
+-  })
+-}
+-
+-const updateServiceWorker = registerSW({
+-  immediate: true,
+-  onNeedRefresh() {
+-    updateDetected = true
+-    markPwaUpdateReady(() => updateServiceWorker(true))
+-    // 上次启动时就已检测到更新但未能应用，这次直接更新
+-    if (pendingAtStartup) applyUpdate()
+-  },
+-  onRegisteredSW(_swUrl, registration) {
+-    if (!registration) return
+-
+-    setInterval(() => {
+-      registration.update().catch(() => {
+-        // registration 可能已被注销，忽略即可
+-      })
+-    }, UPDATE_CHECK_INTERVAL)
+-
+-    if (!pendingAtStartup) return
+-
+-    queueMicrotask(() => {
+-      // 待应用的更新已经完成（SW 已是最新且没有等待中的新 SW）
+-      if (!updateDetected && !registration.waiting && !registration.installing) {
+-        markPwaUpdateSuccessful()
+-      }
+-    })
+-  },
+-  onRegisterError(error) {
+-    console.warn("service worker registration failed", error)
+-  },
+-})
+diff --git a/src/vite-env.d.ts b/src/vite-env.d.ts
+index 5e1bbfa..1e7f59e 100644
+--- a/src/vite-env.d.ts
++++ b/src/vite-env.d.ts
+@@ -1,3 +1,2 @@
+ /// <reference types="vite/client" />
+-/// <reference types="vite-plugin-pwa/client" />
+ /// <reference lib="webworker" />
+diff --git a/vite.config.ts b/vite.config.ts
+index 40d8c10..8da01d7 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -7,13 +7,13 @@ import unimport from "unimport/unplugin"
+ import dotenv from "dotenv"
+ import nitro from "./nitro.config"
+ import { projectDir } from "./shared/dir"
+-import pwa from "./pwa.config"
+ 
+ dotenv.config({
+   path: join(projectDir, ".env.server"),
+ })
+ 
+ export default defineConfig({
++  base: "/hot/",
+   resolve: {
+     alias: {
+       "~": join(projectDir, "src"),
+@@ -39,7 +39,6 @@ export default defineConfig({
+     }),
+     unocss(),
+     react(),
+-    pwa(),
+     nitro(),
+   ],
+ })
